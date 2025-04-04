@@ -38,11 +38,11 @@ class Env(gym.Env):
         # TODO create wrapper class as with pandarobot
         #      possible to make one robot baseclass
         position = [0.5,0.5,0.5]
-        self.ball = Ball(position=position,scaling=0.2)
+        self.ball = Ball(position=position, scaling=0.2)
         
         # TODO get goal URDF
         # self.goal_id = pb.loadSDF("stadium.sdf")
-        self.reward_func = reward_func
+        self.reward_func = reward_func if reward_func is not None else lambda x: 0
     
 
     def step(self, action):
@@ -57,15 +57,20 @@ class Env(gym.Env):
         joint_pos, joint_vel = self.panda_robot.get_position_and_velocity()
         joint_array = np.array([joint_pos, joint_vel], dtype=float)
 
-        # ee_pos = self.panda_robot.get_link_state(8)[0]
+        ee_state = self.panda_robot.get_link_state(8)
+        ee_pos = ee_state[0]
+        ee_vel = ee_state[-2]
+        ee_array = np.array([ee_pos, ee_vel], dtype=float)
 
-        ball_array = None   # TODO (pos(x, y, z), vel(x, y, z))
-        goal_array = None   # TODO (pos(x, y, z), rot(z))
+        ball_pos, ball_vel = self.ball.get_position_and_velocity()
+        ball_array = np.array([ball_pos, ball_vel], dtype=float)
+
+        goal_array = np.zeros([2, 0, 0])   # TODO (pos(x, y, z), rot(z))
         
-        reward = 0
-        #reward = self.reward_func(joint_array, ball_array, goal_array)
+        # TODO incorperate time?
+        state = (joint_array, ee_array, ball_array, goal_array)
 
-        state = None         # TODO 
+        reward = self.reward_func(state)
 
         # terminal = self.terminal_func()
         terminal = False
@@ -82,10 +87,9 @@ class Env(gym.Env):
         )
     
     def reset_random(self):
-        #self.ball           # TODO
         #self.goal           # TODO
         self.panda_robot.reset_state()
-        self.ball.reset_state([5,6,7])
+        self.ball.reset_state([1, 1, 1])
         joint_pos, _ = self.panda_robot.get_position_and_velocity()
 
         return self.step(joint_pos)[0]     # state
