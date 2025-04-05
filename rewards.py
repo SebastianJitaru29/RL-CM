@@ -59,8 +59,8 @@ def reward_score(state: Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]):
     """Reward for scoring, i.e. the ball goes in the goal."""
     joints, ee, ball, goal = state
 
-    # TODO implement
-    #      mostly decide the shape of the goal wrt its centre
+    # TODO take scoring function from goal and use here, needs to have goal
+    #      object and not only positions...
 
     return 0
 
