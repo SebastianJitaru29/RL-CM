@@ -16,7 +16,7 @@ class Ball:
         return (position, velocity)
         
     def reset_state(self, position:list):
-        pb.resetBasePositionAndOrientation(self.ball_id,position, [0,0,0,1])
+        pb.resetBasePositionAndOrientation(self.ball_id, position, [0,0,0,1])
         pb.resetBaseVelocity(self.ball_id, [0,0,0], [0,0,0])
 
     

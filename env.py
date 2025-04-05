@@ -6,6 +6,7 @@ import numpy as np
 from ball import Ball
 
 from panda_robot import PandaRobot
+from goal_post import GoalPost
 
 class Env(gym.Env):
     
@@ -39,6 +40,7 @@ class Env(gym.Env):
         #      possible to make one robot baseclass
         position = [0.5,0.5,0.5]
         self.ball = Ball(position=position, scaling=0.2)
+        self.goal = GoalPost([0, 2, 0], 1)
         
         # TODO get goal URDF
         # self.goal_id = pb.loadSDF("stadium.sdf")
@@ -87,9 +89,9 @@ class Env(gym.Env):
         )
     
     def reset_random(self):
-        #self.goal           # TODO
         self.panda_robot.reset_state()
-        self.ball.reset_state([1, 1, 1])
+        self.ball.reset_state([0, 0.4, 0.1])
+        self.goal.reset_state([0, 2, 0], [0, 0, 0, 1])
         joint_pos, _ = self.panda_robot.get_position_and_velocity()
 
         return self.step(joint_pos)[0]     # state

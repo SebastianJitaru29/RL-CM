@@ -1,0 +1,1 @@
+from goal_post.goal_post import GoalPost
