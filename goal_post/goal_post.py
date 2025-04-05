@@ -23,7 +23,7 @@ class GoalPost:
 
         #self.corners = None
         self.rot_z = 0
-        self.centre = position
+        self.centre = np.array(position)
         self.reset_state(position)
     
     def get_position_and_orientation(self):
@@ -41,17 +41,17 @@ class GoalPost:
         pos, orient = self.get_position_and_orientation()
         rot_z = pb.getEulerFromQuaternion(orient)[2]
         self.rot_z = rot_z
-        self.centre = pos
+        self.centre = np.array(pos)
 
         #self.corners = self._get_corners(pos, rot_z)
 
     def get_score(self, ball_pos: Tuple[float, float, float]):
         """Calculate whether the given position is within the goalframe."""
 
-        if ball_pos > self.dims[2]:
+        if ball_pos[2] > self.dims[2]:
             return False
 
-        gTb = ball_pos - self.centre
+        gTb = np.array(ball_pos) - self.centre
         gTb[0] = gTb[0] * np.cos(self.rot_z) + gTb[1] * np.sin(self.rot_z)
         gTb[1] = -gTb[0] * np.sin(-self.rot_z) + gTb[1] * np.cos(self.rot_z)
 
@@ -60,8 +60,9 @@ class GoalPost:
         # Check if point falls within dimensions
         if (
             gTb[0] <= x_offset and gTb[0] >= -x_offset 
-            and gTb[1] <= self.dims[1] and gTb > 0
+            and gTb[1] <= self.dims[1] and gTb[1] > 0
         ):
+            print('SCORE!!')
             return True
 
         # if not we default to returning False

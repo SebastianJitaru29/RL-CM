@@ -68,6 +68,8 @@ class Env(gym.Env):
         ball_array = np.array([ball_pos, ball_vel], dtype=float)
 
         goal_array = np.zeros([2, 0, 0])   # TODO (pos(x, y, z), rot(z))
+
+        self.goal.get_score(ball_pos)
         
         # TODO incorperate time?
         state = (joint_array, ee_array, ball_array, goal_array)
@@ -90,7 +92,7 @@ class Env(gym.Env):
     
     def reset_random(self):
         self.panda_robot.reset_state()
-        self.ball.reset_state([0, 0.4, 0.1])
+        self.ball.reset_state([1.2, 2.1, 0.1])
         self.goal.reset_state([0, 2, 0], [0, 0, 0, 1])
         joint_pos, _ = self.panda_robot.get_position_and_velocity()
 
