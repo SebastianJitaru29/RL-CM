@@ -3,12 +3,12 @@ import pybullet_data
 import os
 import numpy as np
 
-from typing import List
+from typing import Tuple
 
 class GoalPost:
     def __init__(
             self,
-            position: List[float, float, float],
+            position: Tuple[float, float, float],
             scaling: float
     ):
         
@@ -32,8 +32,8 @@ class GoalPost:
         
     def reset_state(
             self,
-            position: List[float, float, float],
-            orientation: List[float, float, float, float] = [0, 0, 0, 1],
+            position: Tuple[float, float, float],
+            orientation: Tuple[float, float, float, float] = [0, 0, 0, 1],
     ):
         pb.resetBasePositionAndOrientation(self.goal_id, position, 
                                            orientation)
@@ -45,7 +45,7 @@ class GoalPost:
 
         #self.corners = self._get_corners(pos, rot_z)
 
-    def get_score(self, ball_pos: List[float, float, float]):
+    def get_score(self, ball_pos: Tuple[float, float, float]):
         """Calculate whether the given position is within the goalframe."""
 
         if ball_pos > self.dims[2]:
