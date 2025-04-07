@@ -7,6 +7,7 @@ from ball import Ball
 
 from panda_robot import PandaRobot
 from goal_post import GoalPost
+from pd_grav import PDGravController
 
 from typing import List
 
@@ -34,6 +35,12 @@ class Env(gym.Env):
         pb.setTimeStep(sampling_rate)
         self.panda_robot = PandaRobot(include_gripper=True)
 
+        self.controller = PDGravController(
+            self.panda_robot,
+            [200, 200, 200, 200, 250, 50, 20, 0, 0],
+            [30, 30, 30, 30, 10, 10, 5, 0, 0],
+        )
+
         self.real_time = real_time
         
         # Add plane
@@ -60,10 +67,9 @@ class Env(gym.Env):
         @param action (np.ndarry): The action, target joint positions.
         """
         # TODO create controller
-        torques = action
-        # torques = self.controller(action)
+        self.controller.set_joint_desired(action)
+        self.controller.step()
 
-        self.panda_robot.set_torques(torques)
         pb.stepSimulation()
         
         joint_pos, joint_vel = self.panda_robot.get_position_and_velocity()
