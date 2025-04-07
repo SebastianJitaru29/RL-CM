@@ -1,5 +1,5 @@
 import numpy as np
-from typing import Tuple
+from typing import Tuple, Dict
 
 
 """
@@ -12,17 +12,17 @@ lower their influence on the overall reward
 
 """
 
-def reward_EE(state: Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]):
+def reward_EE(state: Dict):
     """Reward for positioning end-effector in line with ball and goal."""
 
-    _, ee, ball, _ = state
+    ee, ball, goal = [state[key] for key in ('ee_info', 'ball_info', 'goal_info')]
 
 
     # if the ball is moving this reward is pointless
     if np.linalg.norm(ball[1]) >= 0.01:
         return 0
     
-    goal_pos = state[3][0]
+    goal_pos = goal[0]
     diff = goal_pos - ball[0]
     
     diff_plane_norm = unit2D(diff)
@@ -38,10 +38,11 @@ def reward_EE(state: Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]):
     return -dist
 
 
-def reward_kick(state: Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]):
+def reward_kick(state: Dict):
     """Reward for kicking the ball sort of towards the goal."""
 
-    _, _, ball, goal = state
+    ball, goal = [state[key] for key in ('ball_info', 'goal_info')]
+
 
     if np.linalg.norm(ball[1]) <= 0.01:
         return 0
@@ -55,14 +56,19 @@ def reward_kick(state: Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]):
     return 1 - angle_diff / np.pi
 
 
-def reward_score(state: Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]):
+def reward_score(state: Dict):
     """Reward for scoring, i.e. the ball goes in the goal."""
-    joints, ee, ball, goal = state
+    return state['score']
 
-    # TODO take scoring function from goal and use here, needs to have goal
-    #      object and not only positions...
 
-    return 0
+def reward_effort(state: Dict):
+    joint_vel = state['joint_info'][1]
+
+    return sum(map(lambda vel: -0.1 * np.abs(vel), joint_vel))
+
+
+def reward_time(state: Dict):
+    return -1
 
 
 def unit2D(vec):
