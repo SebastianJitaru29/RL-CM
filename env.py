@@ -9,24 +9,26 @@ from panda_robot import PandaRobot
 from goal_post import GoalPost
 from pd_grav import PDGravController
 
-from typing import List
+from typing import List, Callable
 
 class Env(gym.Env):
     
     def __init__(
             self, 
             sampling_rate: float,
-            reward_func: callable,
-            max_steps: int=5000,
+            reward_func: Callable,
+            max_steps: int=100,
             *,
+            steps_per_step: int = 50,
             real_time: bool=False
     ):
         """Initializes the Environment.
         
         @param sampling_rate (float): The sampling rate used for PyBullet.
-        @param reward_func (callable): The used reward function, changable
-            for curriculum learning. 
-            Signature: func(joint_info, ball_info, goal_info) / func(state)
+        @param reward_func (Callable): The used reward function
+            Signature: func(state_dict, terminal)
+        @param max_steps (int): maximum number of agent steps.
+        @param steps_per_step (int): physics step per agent step.
         @real_time (bool): Whether to run simulation in real time.
         """
         self.sampling_rate = sampling_rate
@@ -55,10 +57,11 @@ class Env(gym.Env):
         
         # TODO get goal URDF
         # self.goal_id = pb.loadSDF("stadium.sdf")
-        self.reward_func = reward_func if reward_func is not None else lambda x: 0
+        self.reward_func = reward_func if reward_func is not None else lambda x, y: 0
         self.cur_step = 0
         self.score_step = 0
         self.max_steps = max_steps
+        self.physics_steps = range(steps_per_step)
 
 
     def step(self, action: np.ndarray):
@@ -66,11 +69,21 @@ class Env(gym.Env):
 
         @param action (np.ndarry): The action, target joint positions.
         """
-        # TODO create controller
         self.controller.set_joint_desired(action)
-        self.controller.step()
 
-        pb.stepSimulation()
+        # TODO make some extra steps, like 10 or 50 or smth
+        for _ in self.physics_steps:
+            self.controller.step()
+            pb.stepSimulation()
+            ball_pos, ball_vel = self.ball.get_position_and_velocity()
+
+            if self.real_time:
+                time.sleep(self.sampling_rate)
+            
+            # If we haven't scored, check scoring
+            if self.score_step == -1:
+                if self.goal.get_score(ball_pos):
+                    self.score_step = self.cur_step
         
         joint_pos, joint_vel = self.panda_robot.get_position_and_velocity()
         joint_array = np.array([joint_pos, joint_vel], dtype=float)
@@ -80,38 +93,25 @@ class Env(gym.Env):
         ee_vel = ee_state[-2]
         ee_array = np.array([ee_pos, ee_vel], dtype=float)
 
-        ball_pos, ball_vel = self.ball.get_position_and_velocity()
         ball_array = np.array([ball_pos, ball_vel], dtype=float)
 
-        goal_array = np.zeros([2, 0, 0])   # TODO (pos(x, y, z), rot(z))
+        goal_pos = np.array([0, 3, 0])   # TODO (pos(x, y, z), rot(z))
 
         # TODO incorperate time by appending previous states?
-        state = (joint_array, ee_array, ball_array, goal_array)
-
-        score = False
-        # If we haven't scored, check scoring
-        if self.score_step == -1:
-            if self.goal.get_score(ball_pos):
-                score = True
-                self.score_step = self.cur_step
+        state = (joint_array, ee_array, ball_array, goal_pos)
         
         # The ball was in the goal at some point
         terminal = self.score_step != -1 or self.cur_step >= self.max_steps
-
-        if self.real_time:
-            time.sleep(self.sampling_rate)
-            if self.score_step != -1 and self.cur_step - self.score_step < 500:
-                terminal = False
 
         state_dict = {
             'joint_info': joint_array,
             'ee_info': ee_array,
             'ball_info': ball_array,
-            'goal_info': goal_array,
-            'score': score,
+            'goal_info': goal_pos,
+            'score': self.score_step != -1,
         }
 
-        reward = self.reward_func(state_dict)
+        reward = self.reward_func(state_dict, terminal)
         self.cur_step += 1
 
         return (

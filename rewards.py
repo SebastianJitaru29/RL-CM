@@ -15,14 +15,13 @@ lower their influence on the overall reward
 def reward_EE(state: Dict):
     """Reward for positioning end-effector in line with ball and goal."""
 
-    ee, ball, goal = [state[key] for key in ('ee_info', 'ball_info', 'goal_info')]
+    ee, ball, goal_pos = [state[key] for key in ('ee_info', 'ball_info', 'goal_info')]
 
 
     # if the ball is moving this reward is pointless
     if np.linalg.norm(ball[1]) >= 0.01:
         return 0
     
-    goal_pos = goal[0]
     diff = goal_pos - ball[0]
     
     diff_plane_norm = unit2D(diff)
@@ -41,19 +40,19 @@ def reward_EE(state: Dict):
 def reward_kick(state: Dict):
     """Reward for kicking the ball sort of towards the goal."""
 
-    ball, goal = [state[key] for key in ('ball_info', 'goal_info')]
+    ball, goal_pos = [state[key] for key in ('ball_info', 'goal_info')]
 
 
     if np.linalg.norm(ball[1]) <= 0.01:
         return 0
 
-    b2g_unit = unit2D(goal[0] - ball[0])    
+    b2g_unit = unit2D(goal_pos - ball[0])    
     bvel_unit = unit2D(ball[1])
 
     angle_diff = angle_between_vectors(b2g_unit, bvel_unit)
 
     # TODO or smth like this
-    return 1 - angle_diff / np.pi
+    return 1 - np.abs(angle_diff) / np.pi
 
 
 def reward_score(state: Dict):
@@ -79,3 +78,4 @@ def unit2D(vec):
 
 def angle_between_vectors(lhs, rhs):
     return np.arccos(np.clip(np.dot(lhs, rhs), -1.0, 1.0))
+
