@@ -43,7 +43,7 @@ def reward_kick(state: Dict):
     ball, goal_pos = [state[key] for key in ('ball_info', 'goal_info')]
 
 
-    if np.linalg.norm(ball[1]) <= 0.01:
+    if np.linalg.norm(ball[1]) <= 0.1:
         return 0
 
     b2g_unit = unit2D(goal_pos - ball[0])    
@@ -51,6 +51,7 @@ def reward_kick(state: Dict):
 
     angle_diff = angle_between_vectors(b2g_unit, bvel_unit)
 
+    print(f'Kick: {1 - np.abs(angle_diff) / np.pi}')
     # TODO or smth like this
     return 1 - np.abs(angle_diff) / np.pi
 
@@ -63,7 +64,8 @@ def reward_score(state: Dict):
 def reward_effort(state: Dict):
     joint_vel = state['joint_info'][1]
 
-    return sum(map(lambda vel: -0.1 * np.abs(vel), joint_vel))
+    # print(f'Effort: {-np.sum(np.abs(joint_vel) / 7)}')
+    return -np.sum(np.abs(joint_vel) / 7)
 
 
 def reward_time(state: Dict):

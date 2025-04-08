@@ -59,7 +59,7 @@ class Env(gym.Env):
         # self.goal_id = pb.loadSDF("stadium.sdf")
         self.reward_func = reward_func if reward_func is not None else lambda x, y: 0
         self.cur_step = 0
-        self.score_step = 0
+        self.score_step = -1
         self.max_steps = max_steps
         self.physics_steps = range(steps_per_step)
 
@@ -98,7 +98,7 @@ class Env(gym.Env):
         goal_pos = np.array([0, 3, 0])   # TODO (pos(x, y, z), rot(z))
 
         # TODO incorperate time by appending previous states?
-        state = (joint_array, ee_array, ball_array, goal_pos)
+        # state = (joint_array, ee_array, ball_array, goal_pos)
         
         # The ball was in the goal at some point
         terminal = self.score_step != -1 or self.cur_step >= self.max_steps
@@ -115,7 +115,7 @@ class Env(gym.Env):
         self.cur_step += 1
 
         return (
-            state,
+            state_dict,
             reward, 
             terminal,   # terminated
             terminal,   # truncated
