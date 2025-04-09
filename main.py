@@ -17,8 +17,18 @@ if __name__ == '__main__':
         n_success=10,
     )
 
+    agent = RandomAgent(
+        action_space=[1],
+        observation_size=20,
+        n_trajectories=32,
+        buffer_size=10,
+        max_trajectory_length=100,
+        learning_rate=0.01,
+        discount_factor=0.9,
+    )
+
     simulator = Simulator(
-        agent=RandomAgent(),
+        agent=agent,
         n_simulations=1,
         n_episodes=5,
         curriculum=curri,
@@ -26,5 +36,3 @@ if __name__ == '__main__':
     )
 
     simulator.run()
-
-        

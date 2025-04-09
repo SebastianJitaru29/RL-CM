@@ -6,9 +6,10 @@ class RandomAgent(Agent):
     def __init__(
             self,
             *args,
-            **kwargs
+            **kwargs,
     ) -> None:
-        super().__init__(*args, **kwargs)
+        print(f'Passing args: {args}, kwargs: {kwargs}')
+        super(RandomAgent, self).__init__(*args, **kwargs)
 
 
     def choose_action(self, observation):

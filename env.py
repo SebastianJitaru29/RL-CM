@@ -98,10 +98,16 @@ class Env(gym.Env):
         goal_pos = np.array([0, 3, 0])   # TODO (pos(x, y, z), rot(z))
 
         # TODO incorperate time by appending previous states?
-        # state = (joint_array, ee_array, ball_array, goal_pos)
         
-        # The ball was in the goal at some point
-        terminal = self.score_step != -1 or self.cur_step >= self.max_steps
+        # TERMINAL IF ANY OF:
+        # - Ball was in goal at some point
+        # - Ball is further than 4.0 from centre
+        # - Reached maximum number of steps
+        terminal = (
+            self.score_step != -1 
+            or np.linalg.norm(ball_pos) >= 4.0
+            or self.cur_step >= self.max_steps
+        )
 
         state_dict = {
             'joint_info': joint_array,
@@ -154,6 +160,7 @@ class Env(gym.Env):
         y_axis = (y_max - y_min) * np.random.random() + y_min
         
         return [x_axis, y_axis, 0.1]
+    
 
 
 

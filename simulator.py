@@ -99,11 +99,11 @@ class Simulator:
     def _state2obs(state: Dict):
         """Turn state dict into observation for agent."""
 
-        observation = np.zeros(24)
-        observation[0:9] = state['joint_info'][0]
-        observation[9:18] = state['joint_info'][1]
-        observation[18:21] = state['ball_info'][0]
-        observation[21:24] = state['ball_info'][1]
+        observation = np.zeros(20)
+        observation[0:7] = state['joint_info'][0][0:7]
+        observation[7:14] = state['joint_info'][1][0:7]
+        observation[14:17] = state['ball_info'][0]
+        observation[17:20] = state['ball_info'][1]
         
         return observation
 
