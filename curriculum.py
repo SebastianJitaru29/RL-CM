@@ -40,6 +40,7 @@ class Curriculum:
         self.cur_weights = None
         self.cur_thresh = None
         self.track_record = None
+        self.cummulative = 0
 
         self._next_function()
 
@@ -50,12 +51,16 @@ class Curriculum:
         for weight, func in zip(self.cur_weights, self.functions):
             reward += weight * func(state)
         
+        self.cummulative += reward
+        
         if terminal:
             self.track_record[0:-1] = self.track_record[1:]
-            self.track_record[-1] = reward >= self.cur_thresh
+            self.track_record[-1] = self.cummulative >= self.cur_thresh
+            self.cummulative = 0
             
             if np.sum(self.track_record) >= self.n_success:
                 self._next_function()
+                print('--NEXT CURRICULUM SECTION--')
 
         return reward
 

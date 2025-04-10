@@ -8,6 +8,14 @@ class Ball:
         self.ball_id = pb.loadURDF("soccerball.urdf", position,
                                    globalScaling=scaling)
         
+        pb.changeDynamics(
+            bodyUniqueId=self.ball_id,
+            linkIndex=-1,
+            lateralFriction=0.1,
+            spinningFriction=0.01,
+            rollingFriction=0.01,
+        )
+        
     
     def get_position_and_velocity(self):
         position, _ = pb.getBasePositionAndOrientation(self.ball_id)

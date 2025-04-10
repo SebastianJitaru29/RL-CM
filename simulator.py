@@ -29,7 +29,13 @@ class Simulator:
         self.data_dir = data_dir
         self.curri = curriculum
 
-        self.env = Env(1e-3, self.curri, real_time=real_time)
+        self.env = Env(
+            sampling_rate=1e-3, 
+            reward_func=self.curri,
+            max_steps=10,
+            steps_per_step=500,
+            real_time=real_time
+        )
 
         state, _ = self.env.reset()
         self.observation = self._state2obs(state)
@@ -72,6 +78,7 @@ class Simulator:
         """
         state, _ = self.env.reset()
         self.observation = self._state2obs(state)
+        
         cumulative_reward = 0
         while True:
             reward, terminated = self._step(agent)
@@ -87,10 +94,10 @@ class Simulator:
         action = agent.choose_action(self.observation)
         state, reward, terminated, _, _ = self.env.step(action)
 
-        # prev_observation = self.observation
+        prev_observation = self.observation
         self.observation = self._state2obs(state)
 
-        agent.observe_result(reward, terminated, self.observation)
+        agent.observe_result(reward, terminated, prev_observation)
 
         return reward, terminated
 

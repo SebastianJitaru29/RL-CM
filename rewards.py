@@ -20,13 +20,13 @@ def reward_EE(state: Dict):
 
     # if the ball is moving this reward is pointless
     if np.linalg.norm(ball[1]) >= 0.01:
-        return 0
+        return -1
     
     diff = goal_pos - ball[0]
     
     diff_plane_norm = unit2D(diff)
 
-    offset = 0.1    # HYPERPARAMETER
+    offset = 0.2    # HYPERPARAMETER
 
     target_pos = ball[0] + offset * diff_plane_norm
 
@@ -34,7 +34,7 @@ def reward_EE(state: Dict):
 
     # TODO return 0 if btwn target and ball?
 
-    return -dist
+    return -(dist ** 2)
 
 
 def reward_kick(state: Dict):
@@ -51,13 +51,14 @@ def reward_kick(state: Dict):
 
     angle_diff = angle_between_vectors(b2g_unit, bvel_unit)
 
-    print(f'Kick: {1 - np.abs(angle_diff) / np.pi}')
     # TODO or smth like this
-    return 1 - np.abs(angle_diff) / np.pi
+    return 1 - 2 * np.abs(angle_diff) / np.pi
 
 
 def reward_score(state: Dict):
     """Reward for scoring, i.e. the ball goes in the goal."""
+    if state['score']:
+        print('--SCORE!!--')
     return state['score']
 
 

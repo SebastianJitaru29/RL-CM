@@ -25,6 +25,7 @@ class Agent:
             max_trajectory_length: int,
             learning_rate: float,
             discount_factor: float,
+            randomizer: object,
             optimizer_class: optim.Optimizer = optim.RMSprop,
             device: torch.device = torch.device('cuda')
     ) -> None:
@@ -56,6 +57,7 @@ class Agent:
         self.observation_size = observation_size
         self.max_trajectory_length = max_trajectory_length
         self.buffer_size = buffer_size
+        self.randomizer = randomizer
 
         discounts = [[1 * discount_factor ** (max_trajectory_length - ts - 1)
                      for ts in range(max_trajectory_length)]]
@@ -71,6 +73,7 @@ class Agent:
         self.rewards = None
         self.terminated = None
         self.limits = limits
+        self.buffered = False
 
 
     @abstractmethod
@@ -92,9 +95,10 @@ class Agent:
             terminated: bool,
             observation: np.ndarray,
     ):
-
+        # OLD OBSERVATION
+        # so observation with result of actions but not next state
         self.rewards[self.trajectory, self.timestep] = reward
-        self.states[self.trajectory, self.timestep] = torch.tensor(observation)
+        self.states[self.trajectory, self.timestep] = observation
 
         if terminated:
             self.terminated[self.trajectory] = self.timestep
@@ -104,41 +108,42 @@ class Agent:
             # We reached the end of the buffers, override oldest
             # datapoints
             if self.trajectory >= self.buffer_size:
-                self.trajectory = 0  
+                self.trajectory = 0
+                self.buffered = True
+
+            self.traj_till_learn -= 1
+            if self.traj_till_learn == 0:
+                self.learn()
+                self.traj_till_learn = self.n_trajectories
+
         else:
             self.timestep += 1
-        
-        self.traj_till_learn -= 1
-        if self.traj_till_learn == 0:
-            self.learn()
-            self.traj_till_learn = self.n_trajectories
-
 
     def reset(self):        
         self.timestep = 0
         self.trajectory = 0
         self.traj_till_learn = self.n_trajectories
+        self.buffered = False
 
         self._reset_buffers()
 
 
     def _reset_buffers(self) -> None:
 
-        self.states = torch.zeros(self.buffer_size,
+        self.states = np.zeros((self.buffer_size,
                                   self.max_trajectory_length,
-                                  self.observation_size)
+                                  self.observation_size))
         
-        self.chosen_actions = torch.zeros(self.buffer_size,
+        self.chosen_actions = np.zeros((self.buffer_size,
                                           self.max_trajectory_length,
-                                          *self.action_space,
-                                          device=self.device)
+                                          *self.action_space),
+                                          dtype=int)
         
-        self.rewards = torch.zeros(self.buffer_size,
-                                   self.max_trajectory_length,
-                                   device=self.device)
+        self.rewards = np.zeros((self.buffer_size,
+                                   self.max_trajectory_length))
         
-        self.terminated = torch.zeros(self.buffer_size,
-                                      dtype=torch.int)
+        self.terminated = np.zeros(self.buffer_size,
+                                      dtype=int)
 
 
     def _unnormalize(self, output):
