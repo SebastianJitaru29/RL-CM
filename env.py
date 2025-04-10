@@ -105,7 +105,7 @@ class Env(gym.Env):
         # - Reached maximum number of steps
         terminal = (
             self.score_step != -1 
-            or np.linalg.norm(ball_pos) >= 4.0
+            or np.linalg.norm(ball_pos) >= 5.0
             or self.cur_step >= self.max_steps
         )
 
