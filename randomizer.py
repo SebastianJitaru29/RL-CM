@@ -76,7 +76,7 @@ class Randomizer():
     def reset(self):
         self.e_pose_current = self.e_pose_reset
         self.e_random_current = self.e_random_reset
-        self.e_single_current = self.e_single_current
+        self.e_single_current = self.e_single_reset
 
     def _randomize_pose(self, actions):
         """Randomize the entire pose."""

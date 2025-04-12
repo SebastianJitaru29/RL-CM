@@ -19,8 +19,8 @@ def reward_EE(state: Dict):
 
 
     # if the ball is moving this reward is pointless
-    if np.linalg.norm(ball[1]) >= 0.01:
-        return -1
+    # if np.linalg.norm(ball[1]) >= 0.01:
+    #     return -1
     
     diff = goal_pos - ball[0]
     
@@ -33,8 +33,11 @@ def reward_EE(state: Dict):
     dist = np.linalg.norm(ee[0] - target_pos)
 
     # TODO return 0 if btwn target and ball?
+    if dist < 1.0:
+        return 1 - dist
 
-    return -(dist ** 2)
+    return 0
+    # return -(dist ** 2)
 
 
 def reward_kick(state: Dict):

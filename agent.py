@@ -74,6 +74,7 @@ class Agent:
         self.terminated = None
         self.limits = limits
         self.buffered = False
+        self.eval = False
 
 
     @abstractmethod
@@ -95,8 +96,10 @@ class Agent:
             terminated: bool,
             observation: np.ndarray,
     ):
-        # OLD OBSERVATION
-        # so observation with result of actions but not next state
+        # Do not save state if evaluating
+        if self.eval:
+            return
+        
         self.rewards[self.trajectory, self.timestep] = reward
         self.states[self.trajectory, self.timestep] = observation
 
@@ -112,7 +115,10 @@ class Agent:
                 self.buffered = True
 
             self.traj_till_learn -= 1
-            if self.traj_till_learn == 0:
+            if (
+                #self.traj_till_learn == 0 and
+                (self.buffered or self.trajectory >= 2*self.batch_size)
+            ):
                 self.learn()
                 self.traj_till_learn = self.n_trajectories
 
@@ -127,6 +133,17 @@ class Agent:
 
         self._reset_buffers()
 
+
+    def set_eval(self, val: bool):
+        self.eval = val
+
+    def next_task(self):
+        self.randomizer.reset()
+        Agent.reset(self)
+
+    @abstractmethod
+    def save_networks(self, directory):
+        pass
 
     def _reset_buffers(self) -> None:
 

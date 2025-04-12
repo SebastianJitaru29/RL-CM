@@ -42,7 +42,6 @@ class CQNAgent(Agent):
         self.optims = None
         self.theta_bar = None
         self.networks = self._setup_networks()
-
         self.reset()
 
 
@@ -69,7 +68,8 @@ class CQNAgent(Agent):
                 obs_list.append(action - self.n_bins // 2) # [-1, 0, 1]
                 
         # TODO include randomness
-        actions = self.randomizer.randomize(actions)
+        if not self.eval:
+            actions = self.randomizer.randomize(actions)
         
         # TODO torch / numpy?
         self.chosen_actions[self.trajectory, self.timestep] = actions
@@ -78,13 +78,6 @@ class CQNAgent(Agent):
         return act_7.tolist() + [0., 0.]
 
     def learn(self) -> None:
-        # TODO TODO TODO
-        # Retrieve random datapoints
-        # Create batch
-        # Put batch through networks to calculate current value
-        # Calculate loss using theta_bar
-        # Update networks
-        print('--LEARNING--')
         for lst_optim in self.optims:
             for optim in lst_optim:
                 optim.zero_grad()
@@ -92,26 +85,29 @@ class CQNAgent(Agent):
         self._set_train_or_eval('train', self.networks)
         indices = self._random_trajectories(self.batch_size)
 
-        for traj_idx in indices:
-            term_idx = self.terminated[traj_idx]
-            batch = self.states[traj_idx, 0:term_idx]
-            batch_next = self.states[traj_idx, 1:term_idx]
-            actions = self.chosen_actions[traj_idx, 0:term_idx]
-
-            values = self._batch_pass(batch, actions)
-            with torch.no_grad():
-                values_next = self._batch_pass(batch_next)
-            rewards = self.rewards[traj_idx, 0:term_idx]
-            rewards = torch.tensor(rewards)
+        batch, batch_next, rewards, actions, terms = self._create_batch(indices)
+       
+        values = self._batch_pass(self.networks, batch, actions)
+        with torch.no_grad():
+            values_next = self._batch_pass(self.theta_bar, batch_next)
         
-            # target = rewards + values_next
-            target = self.discount_factor * values_next
-            for l_idx in range(self.n_levels):
-                for j_idx in range(self.n_joints):
-                    target[:, l_idx, j_idx] += rewards
+        rewards = torch.tensor(rewards)
+    
+        # target = rewards + values_next
+        target = self.discount_factor * values_next
 
-            loss = self.mse(target, values)
-            loss.backward(retain_graph=True)
+        # Set terminated next states to have values of 0
+        idx = 0
+        for term in terms:
+            idx += term
+            target[idx] = torch.zeros((self.n_levels, self.n_joints))
+
+        for l_idx in range(self.n_levels):
+            for j_idx in range(self.n_joints):
+                target[:, l_idx, j_idx] += rewards
+
+        loss = self.mse(target, values)
+        loss.backward()
         
         # TODO for each network?
         for lst_optim in self.optims:
@@ -136,6 +132,14 @@ class CQNAgent(Agent):
         self._set_train_or_eval('eval', self.networks)
         self.theta_counter = 0
 
+
+    def save_networks(self, directory):
+        for lvl in range(self.n_levels):
+            for joint in range(self.n_joints):
+                path = directory + f'/net_{lvl}_{joint}.pt'
+                torch.save(self.networks[lvl][joint].state_dict(), path)
+
+
     def _setup_networks(self):
         networks = []
         self.optims = []
@@ -148,7 +152,7 @@ class CQNAgent(Agent):
                 network = NeuralNetwork(
                         input_size=self.observation_size+n_prev_joints,
                         output_size=3,
-                        hidden=[48, 48],
+                        hidden=[128, 128],
                         device=self.device,
                     )
                 joint_networks.append(network)
@@ -179,9 +183,9 @@ class CQNAgent(Agent):
         
         return joint_space
     
-    
     def _batch_pass(
             self, 
+            networks,
             batch: np.ndarray,
             actions: np.ndarray = None,
     ) -> np.ndarray:
@@ -192,9 +196,9 @@ class CQNAgent(Agent):
         if actions is not None:
             values = torch.zeros((batch_size, self.n_levels, self.n_joints))
         else:
-            values = torch.zeros((batch_size+1, self.n_levels, self.n_joints))
+            values = torch.zeros((batch_size, self.n_levels, self.n_joints))
 
-        for l_idx, level in enumerate(self.networks):
+        for l_idx, level in enumerate(networks):
             for n_idx, network in enumerate(level):
                 local_obs = torch.tensor(batch_list, dtype=torch.float32)
                 vals = network(local_obs) # (BATCH, 3)
@@ -210,7 +214,6 @@ class CQNAgent(Agent):
                     ) # [-1, 0, 1]
 
         return values
-
 
     def _set_train_or_eval(self, mode, networks):
         for row, lvl in enumerate(networks):
@@ -236,4 +239,40 @@ class CQNAgent(Agent):
         rewards = np.zeros((number_of_samples))
         # STATES, REWARDS, NEXT_STATES, TERMINATED
 
-        
+    def _create_batch(self, trajectories):
+        batch_all = None
+        batch_next_all = None
+        rewards_all = None
+        actions_all = None
+        terms = []
+        for traj_idx in trajectories:
+            term_idx = self.terminated[traj_idx]
+            terms.append(term_idx)
+            batch = self.states[traj_idx, 0:term_idx+1]
+            batch_next = np.zeros_like(batch)
+            batch_next[0:term_idx] = self.states[traj_idx, 1:term_idx+1]
+
+            actions = self.chosen_actions[traj_idx, 0:term_idx+1]
+            rewards = self.rewards[traj_idx, 0:term_idx+1]
+
+            if batch_all is None:
+                batch_all = batch
+            else:
+                batch_all = np.concatenate((batch_all, batch), axis=0)
+
+            if batch_next_all is None:
+                batch_next_all = batch_next
+            else:
+                batch_next_all = np.concatenate((batch_next_all, batch_next), axis=0)
+
+            if rewards_all is None:
+                rewards_all = rewards
+            else:
+                rewards_all = np.concatenate((rewards_all, rewards), axis=0)
+
+            if actions_all is None:
+                actions_all = actions
+            else:
+                actions_all = np.concatenate((actions_all, actions), axis=0)
+
+        return (batch_all, batch_next_all, rewards_all, actions_all, terms)

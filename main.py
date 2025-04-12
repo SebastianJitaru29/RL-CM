@@ -11,20 +11,21 @@ from randomizer import Randomizer
 
 if __name__ == '__main__':
 
+    #[[0.5, 1, 5., 0.1, 0.05]]
     curri = Curriculum(
-        weights=[[1., 0.8, 10., 0.25, 0.],
-                 [0., 2., 10., 0.01, 5e-2],
-                 [0., 0., 10., 0.01, 5e-2]],
-        thresholds=[-2, 1.5, 9.],
+        weights=[[1., 0.5, 1., 0.5, 0.1],
+                 [0.1, 1., 2., 0.5, 0.1],
+                 [0.1, 0.2, 2., 0.5, 0.1]],
+        thresholds=[4.5, 3., 1.70],
         n_success=10,
     )
 
     randomizer = Randomizer(
-        0.3, 0.3, 0.3,
-        2.5e-3, 2.5e-3, 2.5e-3,
+        0.4, 0.3, 0.4,
+        7.5e-5, 7.5e-5, 7.5e-5,
         0.016, 0.016, 0.016,
-        0.1, 0.1, 0.1,
-        max_steps = 3,
+        0.2, 0.16, 0.2,
+        max_steps = 4,
     )
 
     agent = CQNAgent(
@@ -32,21 +33,23 @@ if __name__ == '__main__':
         n_levels=3,
         n_bins=3,
         observation_size=20,
-        n_trajectories=64,
+        n_trajectories=1,
         batch_size=32,
-        buffer_size=512,
-        max_trajectory_length=10,
+        buffer_size=1024,
+        max_trajectory_length=12,
+        theta_bar_delay=64,
         randomizer=randomizer,
-        learning_rate=0.01,
-        discount_factor=0.9,
+        learning_rate=0.001,
+        discount_factor=0.95,
     )
 
     simulator = Simulator(
         agent=agent,
         n_simulations=1,
-        n_episodes=10000,
+        n_episodes=50000,
         curriculum=curri,
         real_time=False,
+        data_dir='/home/mattias/Documents/university/ms/y2/cmr/rl/RL-CM/data',
     )
 
     simulator.run()

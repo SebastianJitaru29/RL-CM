@@ -58,11 +58,19 @@ class Curriculum:
             self.track_record[-1] = self.cummulative >= self.cur_thresh
             self.cummulative = 0
             
-            if np.sum(self.track_record) >= self.n_success:
-                self._next_function()
-                print('--NEXT CURRICULUM SECTION--')
+            # if np.sum(self.track_record) >= self.n_success:
+            #     self._next_function()
+            #     print('--NEXT CURRICULUM SECTION--')
 
         return reward
+    
+
+    def examinate(self, reward):
+        if reward >= self.cur_thresh:
+            self._next_function()
+            print('--NEXT CURRICULUM SECTION--')
+            return True
+        return False
 
 
     def _next_function(self):

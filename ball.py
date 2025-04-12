@@ -11,9 +11,9 @@ class Ball:
         pb.changeDynamics(
             bodyUniqueId=self.ball_id,
             linkIndex=-1,
-            lateralFriction=0.1,
-            spinningFriction=0.01,
-            rollingFriction=0.01,
+            lateralFriction=0.025,
+            spinningFriction=0.005,
+            rollingFriction=0.005,
         )
         
     
