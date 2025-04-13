@@ -1,6 +1,7 @@
 from panda_robot import PandaRobot
 from env import Env
 import numpy as np
+import os
 
 from curriculum import Curriculum
 from simulator import Simulator
@@ -10,6 +11,9 @@ from cqnagent import CQNAgent
 from randomizer import Randomizer
 
 if __name__ == '__main__':
+
+    data_path = os.path.join(os.path.dirname(__file__), 'data')
+    os.makedirs(data_path, exist_ok=True)
 
     #[[0.5, 1, 5., 0.1, 0.05]]
     curri = Curriculum(
@@ -49,7 +53,8 @@ if __name__ == '__main__':
         n_episodes=50000,
         curriculum=curri,
         real_time=False,
-        data_dir='/home/mattias/Documents/university/ms/y2/cmr/rl/RL-CM/data',
+        data_dir=data_path,
+        save_agent=False,
     )
 
     simulator.run()

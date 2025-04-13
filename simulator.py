@@ -25,6 +25,7 @@ class Simulator:
             data_dir: os.PathLike=None,
             *,
             real_time: bool=False,
+            save_agent: bool=False,
     ) -> None:
         """Initializes the Simulator.
         
@@ -38,6 +39,7 @@ class Simulator:
         @param data_dir (os.PathLike): Directory to save results.
         *,
         @param real_time (bool): Bool to run the simulation in real time.
+        @param save_agent (bool): Whether to save the agent's parameters.
         """
         
         self.agent = agent
@@ -46,6 +48,7 @@ class Simulator:
         self.n_episodes = n_episodes
         self.data_dir = data_dir
         self.curri = curriculum
+        self.save_agent = save_agent
 
         self.env = Env(
             sampling_rate=1e-3, 
@@ -86,6 +89,10 @@ class Simulator:
 
         results = np.zeros((self.n_simulations, self.n_episodes))
 
+        if self.save_agent:
+            agent_path = os.path.join(os.path.dirname(__file__), 'networks', identifier)
+            os.makedirs(agent_path, exist_ok=True)
+
         for sim in tqdm(range(self.n_simulations), 'Simulations'):
             agent.reset()
             
@@ -109,10 +116,11 @@ class Simulator:
                     if next_tast:
                         agent.next_task()
 
-                if episode % 1000 == 0 and episode != 0:
-                    agent.save_networks('/home/mattias/Documents/university/ms/y2/cmr/rl/RL-CM/networks') # TODO
+                if self.save_agent and episode % 1000 == 0 and episode != 0:
+                    agent.save_networks(agent_path)
             
-            agent.save_networks('/home/mattias/Documents/university/ms/y2/cmr/rl/RL-CM/networks')         # TODO
+            if self.save_agent:
+                agent.save_networks(agent_path)
             
 
 
@@ -121,7 +129,7 @@ class Simulator:
         
         @param agent (Agent): The agent controlling the arm.
         
-        @return (Tuple[float, float]): The cumulative reward and scoring.
+        @return (Tuple[float, floa]): The cumulative reward and scoring.
         """
         state, _ = self.env.reset()
         self.observation = self._state2obs(state)
