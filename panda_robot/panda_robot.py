@@ -4,7 +4,12 @@ import pybullet as p
 
 
 class PandaRobot:
-    """"""
+    """
+    
+    From: https://github.com/PaulPauls/franka_emika_panda_pybullet
+    All credits go to Paul Pauls 
+        (except the insanely complex 'get_link_state' function).
+    """
 
     def __init__(self, include_gripper):
         """"""
@@ -99,3 +104,4 @@ class PandaRobot:
     # SELF MADE (very complex)
     def get_link_state(self, index):
         return p.getLinkState(self.robot_id, index)
+    
