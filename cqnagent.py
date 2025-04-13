@@ -1,15 +1,16 @@
 from agent import Agent
 
 import torch
-import torch.optim as optim
 import numpy as np
+import os
 
 from network import NeuralNetwork
-
 from copy import deepcopy
 
+from typing import List, Tuple
+
 class CQNAgent(Agent):
-    """
+    """Implementation of the MACQN Agent as described in the report.
     """
 
     def __init__(
@@ -22,7 +23,16 @@ class CQNAgent(Agent):
             *args,
             **kwargs,
     ) -> None:
-        """"""
+        """Initializes the MACQN Agent.
+        
+        @param n_joints (int): the number of joints of the arm.
+        @param n_levels (int): the number of discretization levels.
+        @param n_bins (int): the number of discretization bins.
+        @param theta_bar_delay (int): default=32, the delay of updating
+            the target networks theta^-.
+        @param batch_size (int): default=16, number of trajectories to
+            train on during a training step.
+        """
         super().__init__(
             action_space=(n_levels, n_joints),
             *args,
@@ -49,32 +59,29 @@ class CQNAgent(Agent):
             self,
             observation: np.ndarray,
     ) -> np.ndarray:
-        
-        # TODO joint normalization
+
         obs_list = observation.tolist()
         actions = np.zeros((self.n_levels, self.n_joints))
 
+        # Loop over all the networks to select their bin and append it to
+        # the observation list.
         for l_idx, level in enumerate(self.networks):
             for n_idx, network in enumerate(level):
                 local_obs = torch.tensor(obs_list, dtype=torch.float32)
                 with torch.no_grad():
                     action = torch.argmax(network(local_obs)).item()
-                
-                # TODO change overtime and improve
-                if np.random.random() <= 0.01:
-                    action = np.random.randint(0, self.n_bins)
 
                 actions[l_idx, n_idx] = action
                 obs_list.append(action - self.n_bins // 2) # [-1, 0, 1]
                 
-        # TODO include randomness
         if not self.eval:
             actions = self.randomizer.randomize(actions)
         
-        # TODO torch / numpy?
         self.chosen_actions[self.trajectory, self.timestep] = actions
         
         act_7 = self._unjumble_the_mumble(actions)
+
+        # Append 0 position for the gripper joints.
         return act_7.tolist() + [0., 0.]
 
     def learn(self) -> None:
@@ -87,13 +94,14 @@ class CQNAgent(Agent):
 
         batch, batch_next, rewards, actions, terms = self._create_batch(indices)
        
+        # Obtain the contemporary predicted values of the selected actions
         values = self._batch_pass(self.networks, batch, actions)
+
+        # Compute the predicted maximum value of the next state
         with torch.no_grad():
             values_next = self._batch_pass(self.theta_bar, batch_next)
         
         rewards = torch.tensor(rewards)
-    
-        # target = rewards + values_next
         target = self.discount_factor * values_next
 
         # Set terminated next states to have values of 0
@@ -102,6 +110,7 @@ class CQNAgent(Agent):
             idx += term
             target[idx] = torch.zeros((self.n_levels, self.n_joints))
 
+        # Add the reward to the calculated next values
         for l_idx in range(self.n_levels):
             for j_idx in range(self.n_joints):
                 target[:, l_idx, j_idx] += rewards
@@ -109,7 +118,7 @@ class CQNAgent(Agent):
         loss = self.mse(target, values)
         loss.backward()
         
-        # TODO for each network?
+        # Take an optimization step for each network
         for lst_optim in self.optims:
             for optim in lst_optim:
                 optim.step()
@@ -125,7 +134,7 @@ class CQNAgent(Agent):
         self.randomizer.step()
 
 
-    def reset(self):
+    def reset(self) -> None:
         super().reset()
         self.theta_bar = deepcopy(self.networks)
         self._set_train_or_eval('eval', self.theta_bar)
@@ -133,14 +142,15 @@ class CQNAgent(Agent):
         self.theta_counter = 0
 
 
-    def save_networks(self, directory):
+    def save_networks(self, directory: os.PathLike) -> None:
         for lvl in range(self.n_levels):
             for joint in range(self.n_joints):
                 path = directory + f'/net_{lvl}_{joint}.pt'
                 torch.save(self.networks[lvl][joint].state_dict(), path)
 
 
-    def _setup_networks(self):
+    def _setup_networks(self) -> None:
+        """Helper function to create all the needed neural networks."""
         networks = []
         self.optims = []
         n_prev_joints = 0
@@ -166,8 +176,11 @@ class CQNAgent(Agent):
         
         return networks
     
-    def _unjumble_the_mumble(self, actions):
-
+    def _unjumble_the_mumble(
+            self, 
+            actions: List[List[int]],
+    ) -> List[List[int]]:
+        """Helper function to map the selected bins to joint positions."""
         joint_space = np.zeros(self.n_joints)
 
         for j_idx in range(self.n_joints):
@@ -189,6 +202,7 @@ class CQNAgent(Agent):
             batch: np.ndarray,
             actions: np.ndarray = None,
     ) -> np.ndarray:
+        """Helper function to obtain network outputs for an entire batch."""
         # Shape BATCH, STATE
         batch_size = batch.shape[0]
         batch_list = batch.tolist()
@@ -215,7 +229,12 @@ class CQNAgent(Agent):
 
         return values
 
-    def _set_train_or_eval(self, mode, networks):
+    def _set_train_or_eval(
+            self,
+            mode: str,
+            networks: List[List[NeuralNetwork]],
+    ) -> None:
+        """Helper function to set the correct mode of the networks."""
         for row, lvl in enumerate(networks):
             for col, _ in enumerate(lvl):
                 if mode == 'train':
@@ -224,27 +243,35 @@ class CQNAgent(Agent):
                     networks[row][col].eval()
 
     def _random_trajectories(self, num):
+        """Helper function to select random trajectories from replay buffer."""
         idx_max = self.buffer_size if self.buffered else self.trajectory
         indices = np.random.choice(idx_max, num, replace=False)
         return indices
 
-    def _retrieve_data(self):
-        NUM_TRAJECTORIES = 2
-
-        idx_max = self.buffer_size if self.buffered else self.trajectory
-        indices = np.random.choice(idx_max, NUM_TRAJECTORIES)
-
-        number_of_samples = np.sum(self.terminated(indices))
-        batch = np.zeros((number_of_samples, self.observation_size))
-        rewards = np.zeros((number_of_samples))
-        # STATES, REWARDS, NEXT_STATES, TERMINATED
-
-    def _create_batch(self, trajectories):
+    def _create_batch(
+            self,
+            trajectories: np.ndarray
+        ) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray, List[bool]]:
+        """Helper function to create a batch from the given trajectories.
+        
+        @param trajectories (np.ndarray): the trajectories to put in batch.
+        
+        @return (
+            Tuple[
+                np.ndarray, (states)
+                np.ndarray, (next states)
+                np.ndarray, (rewards)
+                np.ndarray, (selected actions)
+                List[bool], (terminal index per trajectory)
+            ]
+        )
+        """
         batch_all = None
         batch_next_all = None
         rewards_all = None
         actions_all = None
         terms = []
+
         for traj_idx in trajectories:
             term_idx = self.terminated[traj_idx]
             terms.append(term_idx)

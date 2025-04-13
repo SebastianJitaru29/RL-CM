@@ -2,25 +2,10 @@ import numpy as np
 from typing import Tuple, Dict
 
 
-"""
-IDEA
-
-Schedule rewards:
-start -> ee + kick + score
-phase out rewards one by one after certain success
-lower their influence on the overall reward
-
-"""
-
 def reward_EE(state: Dict):
     """Reward for positioning end-effector in line with ball and goal."""
 
     ee, ball, goal_pos = [state[key] for key in ('ee_info', 'ball_info', 'goal_info')]
-
-
-    # if the ball is moving this reward is pointless
-    # if np.linalg.norm(ball[1]) >= 0.01:
-    #     return -1
     
     diff = goal_pos - ball[0]
     
@@ -37,7 +22,6 @@ def reward_EE(state: Dict):
         return 1 - dist
 
     return 0
-    # return -(dist ** 2)
 
 
 def reward_kick(state: Dict):
@@ -54,18 +38,19 @@ def reward_kick(state: Dict):
 
     angle_diff = angle_between_vectors(b2g_unit, bvel_unit)
 
-    # TODO or smth like this
     return 1 - 2 * np.abs(angle_diff) / np.pi
 
 
 def reward_score(state: Dict):
     """Reward for scoring, i.e. the ball goes in the goal."""
+
     if state['score']:
         print('--SCORE!!--')
     return state['score']
 
 
 def reward_effort(state: Dict):
+    """Reward for the amount of movement."""
     joint_vel = state['joint_info'][1]
 
     # print(f'Effort: {-np.sum(np.abs(joint_vel) / 7)}')
@@ -73,15 +58,18 @@ def reward_effort(state: Dict):
 
 
 def reward_time(state: Dict):
+    """Reward for time."""
     return -1
 
 
-def unit2D(vec):
+def unit2D(vec) -> np.ndarray:
+    """Calculates the unit vector on the horizontal plane."""
     unit = np.zeros_like(vec)
     unit[0:2] = vec[0:2] / np.linalg.norm(vec[0:2])
     return unit
 
 
-def angle_between_vectors(lhs, rhs):
+def angle_between_vectors(lhs, rhs) -> float:
+    """Calculates the angle between two vectors."""
     return np.arccos(np.clip(np.dot(lhs, rhs), -1.0, 1.0))
 

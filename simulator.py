@@ -19,7 +19,7 @@ class Simulator:
     def __init__(
             self,
             agent: Union[Agent, Iterable[Agent]],
-            n_simulations: int, # TODO check if we want this
+            n_simulations: int,
             n_episodes: int,
             curriculum: Curriculum,
             data_dir: os.PathLike=None,
@@ -110,9 +110,9 @@ class Simulator:
                         agent.next_task()
 
                 if episode % 1000 == 0 and episode != 0:
-                    agent.save_networks('/home/mattias/Documents/university/ms/y2/cmr/rl/RL-CM/networks')
+                    agent.save_networks('/home/mattias/Documents/university/ms/y2/cmr/rl/RL-CM/networks') # TODO
             
-            agent.save_networks('/home/mattias/Documents/university/ms/y2/cmr/rl/RL-CM/networks')
+            agent.save_networks('/home/mattias/Documents/university/ms/y2/cmr/rl/RL-CM/networks')         # TODO
             
 
 

@@ -2,6 +2,7 @@ from abc import abstractmethod
 import torch
 import torch.optim as optim
 import numpy as np
+import os
 
 limits = np.array([
     [-2.7437,  2.7437],
@@ -82,11 +83,18 @@ class Agent:
             self,
             observation: np.ndarray,
     ) -> np.ndarray:
+        """Select an action based on the observation.
+        
+        @param observation (np.ndarray): the observed environment state.
+
+        @return (np.ndarray): The selected action.
+        """
         return np.zeros(7)
 
 
     @abstractmethod
     def learn(self) -> None:
+        """Perform a training step for the agent."""
         pass
 
 
@@ -95,7 +103,18 @@ class Agent:
             reward: float,
             terminated: bool,
             observation: np.ndarray,
-    ):
+    ) -> None:
+        """Observe the results after a taken action.
+
+        This function stores the state and resulting information in the
+        memory replay buffer.
+
+        @param reward (float): the observerd reward.
+        @param terminated (bool): whether the new state was terminal.
+        @param observation (np.ndarray): the state in which the action
+            was taken.
+        
+        """
         # Do not save state if evaluating
         if self.eval:
             return
@@ -116,7 +135,6 @@ class Agent:
 
             self.traj_till_learn -= 1
             if (
-                #self.traj_till_learn == 0 and
                 (self.buffered or self.trajectory >= 2*self.batch_size)
             ):
                 self.learn()
@@ -125,7 +143,8 @@ class Agent:
         else:
             self.timestep += 1
 
-    def reset(self):        
+    def reset(self) -> None:
+        """Reset the agent."""
         self.timestep = 0
         self.trajectory = 0
         self.traj_till_learn = self.n_trajectories
@@ -134,19 +153,33 @@ class Agent:
         self._reset_buffers()
 
 
-    def set_eval(self, val: bool):
+    def set_eval(self, val: bool) -> None:
+        """Set the evaluation mode of the agent.
+        
+        @param val (bool): whether to be in evaluation mode.
+        """
         self.eval = val
 
-    def next_task(self):
+    def next_task(self) -> None:
+        """Prepare the agent for the next task.
+        
+        Resets the memory replay buffer and the randomizer to setup
+        training for the next task.
+        """
         self.randomizer.reset()
         Agent.reset(self)
 
     @abstractmethod
-    def save_networks(self, directory):
+    def save_networks(self, directory: os.PathLike) -> None:
+        """Save the networks of the agent.
+        
+        @param directory (os.PathLike): the directory to save the networks in.
+        """
+
         pass
 
     def _reset_buffers(self) -> None:
-
+        """Helper function to reset the buffers."""
         self.states = np.zeros((self.buffer_size,
                                   self.max_trajectory_length,
                                   self.observation_size))

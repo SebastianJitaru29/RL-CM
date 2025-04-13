@@ -1,9 +1,17 @@
 import numpy as np
 import numpy.random as npr
 
+from typing import List
 
 class Randomizer():
-    
+    """Class to handle randomization of selected actions.
+
+    This class randomizes the actions of the agent. There are three
+    randomizations:
+    1. Pose randomization -> select a fully random pose.
+    2. Any randomization -> randomize any action (selected randomly).
+    3. Joint randomization -> fully randomize one joint.
+    """
     def __init__(
             self,
             e_pose_start: float,
@@ -20,6 +28,26 @@ class Randomizer():
             e_single_reset: float,
             max_steps: int,
     ):
+        """Initializes the randomizer.
+
+        @param e_pose_start (float): Chance of random complete pose.
+        @param e_random_start (float): Chance of randomly randomizing.
+        @param e_single_start (float): Chance of fully randomizing one joint
+        @param e_pose_step (float): Reduction per step of pose chance.
+        @param e_random_step (float): Reduction per step of random chance.
+        @param e_single_step (float): Reduction per step of joint chance.
+        @param e_pose_min (float): Minimum chance of random pose.
+        @param e_random_min (float): Minumum chance of random chance.
+        @param e_single_min (float): Minimum chance of random joint.
+        @param e_pose_reset (float): Value to set pose chance to after
+            curriculum change.
+        @param e_random_reset (float): Value to set random chance to after
+            curriculum change.
+        @param e_single_reset (float): Value to set joint chance to after
+            curriculum change.
+        @param max_steps (int): Maximum number of steps to keep the
+            randomized action.
+        """
         self.e_pose_start = e_pose_start
         self.e_random_start = e_random_start
         self.e_single_start = e_single_start
@@ -45,8 +73,13 @@ class Randomizer():
 
         self.poses = [[None] * 7] * 3
 
-    def randomize(self, actions):
+    def randomize(self, actions: List[List[int]]) -> List[List[int]]:
+        """Select a randomization and randomize actios.
+        
+        @param actions (List[List[int]]): the actions selected by the agent.
 
+        @return (List[List[int]]): the actions with randomizations.
+        """
         if self.timer != 0:
             self.timer -= 1
             return self._timed_randomness(actions)
@@ -69,16 +102,18 @@ class Randomizer():
         return actions
     
     def step(self):
+        """Perform actions for after a training step."""
         self.e_pose_current -= self.e_pose_step
         self.e_random_current -= self.e_random_step
         self.e_single_current -= self.e_single_step
 
     def reset(self):
+        """Reset values for the next curriculum."""
         self.e_pose_current = self.e_pose_reset
         self.e_random_current = self.e_random_reset
         self.e_single_current = self.e_single_reset
 
-    def _randomize_pose(self, actions):
+    def _randomize_pose(self, actions: List[List[int]]):
         """Randomize the entire pose."""
         for r_idx, row in enumerate(self.poses):
             for c_idx, _ in enumerate(row):
@@ -88,7 +123,7 @@ class Randomizer():
 
         return actions
 
-    def _randomize_random(self, actions):
+    def _randomize_random(self, actions: List[List[int]]):
         """Randomize random bins."""
         for r_idx, row in enumerate(self.poses):
             for c_idx, _ in enumerate(row):
@@ -99,7 +134,7 @@ class Randomizer():
         
         return actions
 
-    def _randomize_single_joint(self, actions):
+    def _randomize_single_joint(self, actions: List[List[int]]):
         """Fully randomize 1 joint."""
 
         joint = npr.randint(0, 7)
@@ -111,7 +146,7 @@ class Randomizer():
         return actions
         
 
-    def _timed_randomness(self, actions):
+    def _timed_randomness(self, actions: List[List[int]]):
         """Return randomized action of prev step.
         
         Ensures some consistency in the randomization.

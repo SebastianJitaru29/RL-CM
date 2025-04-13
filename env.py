@@ -9,9 +9,14 @@ from panda_robot import PandaRobot
 from goal_post import GoalPost
 from pd_grav import PDGravController
 
-from typing import List, Callable
+from typing import Callable, Tuple, Dict
 
 class Env(gym.Env):
+    """Class that handles the PyBullet environment.
+    
+    This class wraps the PyBullet simulator and handles all the logic
+    not handled by PyBullet itself.
+    """
     
     def __init__(
             self, 
@@ -26,7 +31,7 @@ class Env(gym.Env):
         
         @param sampling_rate (float): The sampling rate used for PyBullet.
         @param reward_func (Callable): The used reward function
-            Signature: func(state_dict, terminal)
+            Signature: func(state_dict)
         @param max_steps (int): maximum number of agent steps.
         @param steps_per_step (int): physics step per agent step.
         @real_time (bool): Whether to run simulation in real time.
@@ -64,7 +69,10 @@ class Env(gym.Env):
         self.physics_steps = range(steps_per_step)
 
 
-    def step(self, action: np.ndarray):
+    def step(
+            self, 
+            action: np.ndarray
+    ) -> Tuple[Dict, float, bool, bool, Dict]:
         """Taking one environment step at provided sampling rate.
 
         @param action (np.ndarry): The action, target joint positions.
@@ -97,12 +105,6 @@ class Env(gym.Env):
 
         goal_pos = np.array([0, 3, 0])   # TODO (pos(x, y, z), rot(z))
 
-        # TODO incorperate time by appending previous states?
-        
-        # TERMINAL IF ANY OF:
-        # - Ball was in goal at some point
-        # - Ball is further than 4.0 from centre
-        # - Reached maximum number of steps
         terminal = (
             self.score_step != -1 
             or np.linalg.norm(ball_pos) >= 5.0
@@ -117,7 +119,7 @@ class Env(gym.Env):
             'score': self.score_step != -1,
         }
 
-        reward = self.reward_func(state_dict, terminal)
+        reward = self.reward_func(state_dict)
         self.cur_step += 1
 
         return (
@@ -129,26 +131,36 @@ class Env(gym.Env):
         )
     
     def reset_random(self):
+        """Resets the environment with a random ball position."""
         self.cur_step = 0
         self.score_step = -1
         self.panda_robot.reset_state()
         self.ball.reset_state(self._random_ball_pos())
-        #self.goal.reset_state([0, 2, 0], [0, 0, 0, 1])
         joint_pos, _ = self.panda_robot.get_position_and_velocity()
 
         return self.step(joint_pos)[0]     # state
 
     def reset(self, **kwargs):
+        """Resets the environment."""
         super().reset(**kwargs)
         return self.reset_random(), {}
     
-    def set_realtime(self, real_time: bool):
+    def set_realtime(self, real_time: bool) -> None:
+        """Set whether to simulate in real time or not.
+        
+        @param real_time (bool): Whether to simulate in real time.
+        """
         self.real_time = real_time
 
-    def set_reward(self, func: callable):
+    def set_reward(self, func: Callable):
+        """Sets the used reward function.
+        
+        @param func (Callable): the reward function - signature func(Dict)
+        """
         self.reward_func = func
 
     def _random_ball_pos(self):
+        """Helper function to randomize ball position within range."""
         dist_min = 0.3
         dist_max = 0.7
         
