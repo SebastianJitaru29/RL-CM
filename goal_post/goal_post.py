@@ -16,7 +16,7 @@ class GoalPost:
             os.path.dirname(__file__) + '/model_description'
         )
 
-        self.goal_id = pb.loadURDF('goal_post.urdf', position, 
+        self.goal_id = pb.loadURDF('goal_post_nocol.urdf', position, 
                                     globalScaling=scaling, useFixedBase=True)
         
         self.dims = np.array([2, 0.7, 1.2]) * scaling
@@ -62,7 +62,6 @@ class GoalPost:
             gTb[0] <= x_offset and gTb[0] >= -x_offset 
             and gTb[1] <= self.dims[1] and gTb[1] > 0
         ):
-            print('SCORE!!')
             return True
 
         # if not we default to returning False

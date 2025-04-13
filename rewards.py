@@ -44,8 +44,6 @@ def reward_kick(state: Dict):
 def reward_score(state: Dict):
     """Reward for scoring, i.e. the ball goes in the goal."""
 
-    if state['score']:
-        print('--SCORE!!--')
     return state['score']
 
 
